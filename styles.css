@@ -1,0 +1,282 @@
+/* Reset default browser styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Basic page layout */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 20px 0;
+}
+
+/* Main container styling */
+.container {
+    text-align: center;
+    padding: 20px;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Controls section styling */
+.controls {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Toggle switch container */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Checkbox styling */
+.toggle-container input {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* Toggle text styling */
+.toggle-text {
+    font-size: 16px;
+    color: #333;
+}
+
+/* Heading styling */
+h1 {
+    margin-bottom: 30px;
+    color: #333;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+/* Piano container styling */
+.piano {
+    position: relative;
+    background-color: #222;
+    width: 100%;
+    max-width: 1000px;  
+    aspect-ratio: 3 / 1;
+    border-radius: 10px;
+    padding: 30px 20px 40px;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+/* White keys container */
+.white-keys {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%; /* Make this container fill the padded area */
+    position: relative; /* Ensure it establishes a positioning context */
+}
+
+/* Black keys container */
+.black-keys {
+    position: absolute;
+    top: 25px; /* Align with top padding */
+    left: 20px; /* Align with left padding */
+    right: 20px; /* Align with right padding */
+    width: calc(100% - 40px); /* Adjust width based on left/right padding */
+    height: 50%; /* Current height */
+    pointer-events: none; /* Allow clicks to pass through container */
+}
+
+/* Position each black key above the correct white keys */
+.black-keys .black:nth-child(1) { left: 4.5%; }
+.black-keys .black:nth-child(2) { left: 11.5%; }
+.black-keys .black:nth-child(3) { left: 24.5%; }
+.black-keys .black:nth-child(4) { left: 31.5%; }
+.black-keys .black:nth-child(5) { left: 38%; }
+.black-keys .black:nth-child(6) { left: 51.5%; }
+.black-keys .black:nth-child(7) { left: 58%; }
+.black-keys .black:nth-child(8) { left: 71.5%; }
+.black-keys .black:nth-child(9) { left: 78.5%; }
+.black-keys .black:nth-child(10) { left: 85%; }
+
+/* Base key styling */
+.key {
+    cursor: pointer;
+    transition: all 0.1s ease;
+    position: relative;
+    text-align: center;
+    font-weight: bold;
+    color: #666;
+    touch-action: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Align text to bottom */
+}
+
+/* White key styling */
+.white {
+    background-color: white;
+    width: calc(100% / 15 - 4px); /* Adjust width calculation if needed */
+    height: 100%; /* Fill the height of the .white-keys container */
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #ccc;
+    box-shadow: 0 6px 0 #ccc;
+    font-size: clamp(10px, 2vw, 16px);
+    transition: all 0.1s ease;
+    padding-bottom: 15px; /* Padding for the text */
+}
+
+/* Note name styling */
+.note-name {
+    font-size: clamp(12px, 2.5vw, 20px);
+    font-weight: bold;
+    color: #333;
+}
+
+/* Octave number styling */
+.octave {
+    font-size: clamp(8px, 1.5vw, 14px);
+    color: #666;
+}
+
+/* Black key styling */
+.black {
+    position: absolute; /* Position keys individually */
+    background-color: black;
+    width: 4%; /* Adjusted width */
+    height: 100%; /* Fill the height of the .black-keys container */
+    z-index: 1;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 6px 0 #111;
+    color: #eee;
+    font-size: clamp(8px, 1.5vw, 14px);
+    transition: all 0.1s ease;
+    padding-bottom: 10px; /* Padding for the text */
+    pointer-events: auto; /* Enable pointer events for keys */    
+}
+
+/* Keyboard guide styling */
+.keyboard-guide {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: #333;
+    font-size: clamp(10px, 2vw, 14px);
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 5px;
+    width: fit-content;
+    padding: 5px 15px;
+    z-index: 2;
+}
+
+/* Responsive design for different screen sizes */
+@media (max-width: 1200px) {
+    .piano {
+        aspect-ratio: 3 / 1;
+        max-width: 900px;
+    }
+}
+
+@media (min-width: 1201px) {
+    .piano {
+        max-width: 1000px;
+        aspect-ratio: 3 / 1;
+    }
+}
+
+@media (max-width: 992px) {
+    .piano {
+        aspect-ratio: 2.8 / 1;
+        padding: 25px 15px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .piano {
+        aspect-ratio: 4 / 1;
+        padding: 20px 15px 15px;
+    }
+    
+    .white {
+        border-width: 1px;
+        box-shadow: 0 4px 0 #ccc;
+    }
+    
+    .black {
+        box-shadow: 0 4px 0 #111;
+    }
+    
+    .keyboard-guide p {
+        display: none;
+    }
+    
+    .keyboard-guide::after {
+        content: "Tap the keys to play!";
+        display: block;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .piano {
+        aspect-ratio: 3.5 / 1;
+        padding: 15px 10px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .piano {
+        aspect-ratio: 3 / 1;
+        padding: 15px 10px 10px;
+    }
+    
+    .white {
+        border-width: 1px;
+        box-shadow: 0 3px 0 #ccc;
+    }
+    
+    .black {
+        box-shadow: 0 3px 0 #111;
+    }
+}
+
+/* Active state styling for keys */
+.white.active, .white:active {
+    background-color: #f0f0f0;
+    box-shadow: 0 2px 0 #ccc;
+    transform: translateY(3px);
+}
+
+.black.active, .black:active {
+    background-color: #222; /* Keep background dark */
+    box-shadow: 0 2px 0 #111; /* Keep shadow dark to match key */
+    transform: translateY(3px); /* Use the same vertical movement as white keys */ 
+}
+
+/* Hidden notes styling */
+.key.notes-hidden .note-name,
+.key.notes-hidden .octave {
+    color: transparent;
+    transition: color 0.2s ease;
+}
+
+/* Transition effects for keys */
+.key {
+    transition: color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+}
