@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Piano</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Piano</h1>
+        <!-- Controls section for toggling note visibility -->
+        <div class="controls">
+            <label class="toggle-container">
+                <input type="checkbox" id="show-notes" checked>
+                <span class="toggle-text">Show Notes</span>
+            </label>
+        </div>
+        <!-- Main piano container -->
+        <div class="piano">
+            <!-- White keys section - contains all white piano keys -->
+            <div class="white-keys">
+                <div class="key white" data-note="C3" data-key="z"><span class="note-name">C</span><span class="octave">3</span></div>
+                <div class="key white" data-note="D3" data-key="x"><span class="note-name">D</span><span class="octave">3</span></div>
+                <div class="key white" data-note="E3" data-key="c"><span class="note-name">E</span><span class="octave">3</span></div>
+                <div class="key white" data-note="F3" data-key="v"><span class="note-name">F</span><span class="octave">3</span></div>
+                <div class="key white" data-note="G3" data-key="b"><span class="note-name">G</span><span class="octave">3</span></div>
+                <div class="key white" data-note="A3" data-key="n"><span class="note-name">A</span><span class="octave">3</span></div>
+                <div class="key white" data-note="B3" data-key="m"><span class="note-name">B</span><span class="octave">3</span></div>
+                <div class="key white" data-note="C4" data-key="q"><span class="note-name">C</span><span class="octave">4</span></div>
+                <div class="key white" data-note="D4" data-key="w"><span class="note-name">D</span><span class="octave">4</span></div>
+                <div class="key white" data-note="E4" data-key="e"><span class="note-name">E</span><span class="octave">4</span></div>
+                <div class="key white" data-note="F4" data-key="r"><span class="note-name">F</span><span class="octave">4</span></div>
+                <div class="key white" data-note="G4" data-key="t"><span class="note-name">G</span><span class="octave">4</span></div>
+                <div class="key white" data-note="A4" data-key="y"><span class="note-name">A</span><span class="octave">4</span></div>
+                <div class="key white" data-note="B4" data-key="u"><span class="note-name">B</span><span class="octave">4</span></div>
+                <div class="key white" data-note="C5" data-key="i"><span class="note-name">C</span><span class="octave">5</span></div>
+            </div>
+            <!-- Black keys section - contains all black piano keys -->
+            <div class="black-keys">
+                <div class="key black" data-note="C#3" data-key="s"><span class="note-name">C#</span><span class="octave">3</span></div>
+                <div class="key black" data-note="D#3" data-key="d"><span class="note-name">D#</span><span class="octave">3</span></div>
+                <!-- <div class="key black empty"></div> Removed -->
+                <div class="key black" data-note="F#3" data-key="g"><span class="note-name">F#</span><span class="octave">3</span></div>
+                <div class="key black" data-note="G#3" data-key="h"><span class="note-name">G#</span><span class="octave">3</span></div>
+                <div class="key black" data-note="A#3" data-key="j"><span class="note-name">A#</span><span class="octave">3</span></div>
+                <!-- <div class="key black empty"></div> Removed -->
+                <div class="key black" data-note="C#4" data-key="2"><span class="note-name">C#</span><span class="octave">4</span></div>
+                <div class="key black" data-note="D#4" data-key="3"><span class="note-name">D#</span><span class="octave">4</span></div>
+                <!-- <div class="key black empty"></div> Removed -->
+                <div class="key black" data-note="F#4" data-key="5"><span class="note-name">F#</span><span class="octave">4</span></div>
+                <div class="key black" data-note="G#4" data-key="6"><span class="note-name">G#</span><span class="octave">4</span></div>
+                <div class="key black" data-note="A#4" data-key="7"><span class="note-name">A#</span><span class="octave">4</span></div>
+                <!-- <div class="key black empty"></div> Removed -->
+            </div>
+            <!-- Keyboard instructions for users -->
+            <div class="keyboard-guide">
+                <p>Use your keyboard to play! Lower octave: Z-M, Higher octave: Q-I</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
