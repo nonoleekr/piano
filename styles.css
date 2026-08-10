@@ -281,6 +281,38 @@ h1 {
     color: #eee;
 }
 
+/* Keyboard-shortcut badge shown near the top of each key */
+.key-shortcut {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 1.4em;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: clamp(8px, 1.4vw, 12px);
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.white .key-shortcut {
+    background: #eef1f6;
+    color: var(--accent-strong);
+    border: 1px solid var(--surface-border);
+}
+
+.black .key-shortcut {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.key.notes-hidden .key-shortcut {
+    color: transparent;
+    background: transparent;
+    border-color: transparent;
+}
+
 /* Keyboard guide styling */
 .keyboard-guide {
     margin: 14px auto 0;

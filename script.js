@@ -104,9 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const { pitchClass, octave } = parseNote(currentNoteFor(key.dataset.note));
             key.querySelector('.note-name').textContent = pitchClass;
             key.querySelector('.octave').textContent = octave;
-            const shortcut = key.dataset.key;
-            key.setAttribute('aria-label', shortcut
-                ? `${pitchClass}${octave}, keyboard shortcut ${shortcut.toUpperCase()}`
+            const shortcutLabel = key.dataset.keyLabel;
+            key.setAttribute('aria-label', shortcutLabel
+                ? `${pitchClass}${octave}, keyboard shortcut ${shortcutLabel}`
                 : `${pitchClass}${octave}`);
         });
     }
@@ -263,6 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseup', () => { isMouseDown = false; });
 
     // ---- Physical keyboard shortcuts ----
+    // Keyed by event.code (physical key position) rather than event.key, so the
+    // ergonomic layout below stays correct regardless of Shift/Caps Lock or keyboard language.
     const keyboardMap = {};
     keys.forEach(key => {
         const shortcut = key.getAttribute('data-key');
@@ -271,14 +273,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('keydown', (event) => {
         getAudioContext();
-        const mappedKey = keyboardMap[event.key.toLowerCase()];
+        const mappedKey = keyboardMap[event.code];
         if (mappedKey && !event.repeat) {
             pressKey(mappedKey);
         }
     });
 
     document.addEventListener('keyup', (event) => {
-        const mappedKey = keyboardMap[event.key.toLowerCase()];
+        const mappedKey = keyboardMap[event.code];
         if (mappedKey) releaseKey(mappedKey);
     });
 
