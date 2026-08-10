@@ -8,72 +8,180 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+    --bg-top: #eef1f6;
+    --bg-bottom: #dbe2ec;
+    --text-primary: #2a2d34;
+    --text-muted: #6b7280;
+    --accent: #4f9dde;
+    --accent-strong: #2f7cc2;
+    --piano-bg-top: #2f2f34;
+    --piano-bg-bottom: #17171a;
+    --white-key-bg: #fdfdfd;
+    --white-key-border: #cfd2d8;
+    --white-key-shadow: #b9bdc6;
+    --black-key-bg: #16161a;
+    --black-key-shadow: #050506;
+    --key-text: #333;
+    --key-text-muted: #777;
+    --active-glow: #ffcf5c;
+    --surface: #ffffff;
+    --surface-border: #d7dce3;
+}
+
 /* Basic page layout */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     overflow-x: hidden;
-    padding: 20px 0;
+    padding: 24px 12px;
 }
 
 /* Main container styling */
 .container {
     text-align: center;
-    padding: 20px;
     width: 100%;
-    max-width: 1000px;
+    max-width: 1040px;
     margin: 0 auto;
 }
 
-/* Controls section styling */
-.controls {
+header {
     margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
 }
 
-/* Toggle switch container */
+h1 {
+    color: var(--text-primary);
+    font-size: clamp(1.6rem, 5vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: clamp(0.85rem, 2vw, 1rem);
+}
+
+/* Controls row */
+.controls {
+    margin-bottom: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px 20px;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    padding: 12px 18px;
+    box-shadow: 0 2px 10px rgba(20, 25, 35, 0.06);
+}
+
 .toggle-container {
     display: flex;
     align-items: center;
+    gap: 8px;
     cursor: pointer;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
-/* Checkbox styling */
 .toggle-container input {
-    margin-right: 8px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-strong);
     cursor: pointer;
 }
 
-/* Toggle text styling */
 .toggle-text {
-    font-size: 16px;
-    color: #333;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
-/* Heading styling */
-h1 {
-    margin-bottom: 30px;
-    color: #333;
-    font-size: clamp(1.5rem, 5vw, 2.5rem);
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-control input[type="range"] {
+    width: 110px;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+}
+
+.octave-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.octave-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 92px;
+}
+
+.octave-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.octave-btn:hover:not(:disabled) {
+    background-color: #f0f4f9;
+}
+
+.octave-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.octave-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Now playing indicator */
+.now-playing {
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    min-height: 1.3em;
+}
+
+.now-playing-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 6px;
+}
+
+#now-playing-notes {
+    font-variant-numeric: tabular-nums;
 }
 
 /* Piano container styling */
 .piano {
     position: relative;
-    background-color: #222;
+    background: linear-gradient(180deg, var(--piano-bg-top), var(--piano-bg-bottom));
     width: 100%;
-    max-width: 1000px;  
+    max-width: 1000px;
     aspect-ratio: 3 / 1;
-    border-radius: 10px;
+    border-radius: 16px;
     padding: 30px 20px 40px;
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     margin: 0 auto;
     overflow: hidden;
 }
@@ -83,19 +191,19 @@ h1 {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    height: 100%; /* Make this container fill the padded area */
-    position: relative; /* Ensure it establishes a positioning context */
+    height: 100%;
+    position: relative;
 }
 
 /* Black keys container */
 .black-keys {
     position: absolute;
-    top: 25px; /* Align with top padding */
-    left: 20px; /* Align with left padding */
-    right: 20px; /* Align with right padding */
-    width: calc(100% - 40px); /* Adjust width based on left/right padding */
-    height: 50%; /* Current height */
-    pointer-events: none; /* Allow clicks to pass through container */
+    top: 25px;
+    left: 20px;
+    right: 20px;
+    width: calc(100% - 40px);
+    height: 50%;
+    pointer-events: none;
 }
 
 /* Position each black key above the correct white keys */
@@ -110,76 +218,126 @@ h1 {
 .black-keys .black:nth-child(9) { left: 78.5%; }
 .black-keys .black:nth-child(10) { left: 85%; }
 
-/* Base key styling */
+/* Base key styling (buttons, reset UA appearance) */
 .key {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    outline: none;
+    font-family: inherit;
     cursor: pointer;
-    transition: all 0.1s ease;
+    transition: color 0.2s ease, transform 0.08s ease, box-shadow 0.1s ease, background-color 0.1s ease;
     position: relative;
     text-align: center;
     font-weight: bold;
-    color: #666;
     touch-action: none;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Align text to bottom */
+    justify-content: flex-end;
 }
 
 /* White key styling */
 .white {
-    background-color: white;
-    width: calc(100% / 15 - 4px); /* Adjust width calculation if needed */
-    height: 100%; /* Fill the height of the .white-keys container */
+    background-color: var(--white-key-bg);
+    width: calc(100% / 15 - 4px);
+    height: 100%;
     border-radius: 0 0 8px 8px;
-    border: 1px solid #ccc;
-    box-shadow: 0 6px 0 #ccc;
+    border: 1px solid var(--white-key-border);
+    box-shadow: 0 6px 0 var(--white-key-shadow);
     font-size: clamp(10px, 2vw, 16px);
-    transition: all 0.1s ease;
-    padding-bottom: 15px; /* Padding for the text */
+    padding-bottom: 15px;
 }
 
 /* Note name styling */
 .note-name {
     font-size: clamp(12px, 2.5vw, 20px);
     font-weight: bold;
-    color: #333;
+    color: var(--key-text);
 }
 
 /* Octave number styling */
 .octave {
     font-size: clamp(8px, 1.5vw, 14px);
-    color: #666;
+    color: var(--key-text-muted);
 }
 
 /* Black key styling */
 .black {
-    position: absolute; /* Position keys individually */
-    background-color: black;
-    width: 4%; /* Adjusted width */
-    height: 100%; /* Fill the height of the .black-keys container */
+    position: absolute;
+    background-color: var(--black-key-bg);
+    width: 4%;
+    height: 100%;
     z-index: 1;
     border-radius: 0 0 5px 5px;
-    box-shadow: 0 6px 0 #111;
+    box-shadow: 0 6px 0 var(--black-key-shadow);
     color: #eee;
     font-size: clamp(8px, 1.5vw, 14px);
-    transition: all 0.1s ease;
-    padding-bottom: 10px; /* Padding for the text */
-    pointer-events: auto; /* Enable pointer events for keys */    
+    padding-bottom: 10px;
+    pointer-events: auto;
+}
+
+.black .note-name,
+.black .octave {
+    color: #eee;
 }
 
 /* Keyboard guide styling */
 .keyboard-guide {
-    position: absolute;
-    bottom: -30px;
-    left: 50%;
-    transform: translateX(-50%);
+    margin: 14px auto 0;
     text-align: center;
-    color: #333;
-    font-size: clamp(10px, 2vw, 14px);
-    background-color: rgba(255, 255, 255, 0.7);
-    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: clamp(9px, 1.8vw, 13px);
+    background-color: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
     width: fit-content;
-    padding: 5px 15px;
+    max-width: 90vw;
+    padding: 6px 14px;
+}
+
+.keyboard-guide kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid #c7cdd6;
+    box-shadow: 0 1px 0 #c7cdd6;
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+/* Active state: clear visual feedback when a key is pressed */
+.white.active {
+    background-color: #fff4d6;
+    box-shadow: 0 2px 0 var(--white-key-shadow), 0 0 0 3px var(--active-glow) inset;
+    transform: translateY(3px);
+}
+
+.black.active {
+    background-color: #3a2f10;
+    box-shadow: 0 2px 0 var(--black-key-shadow), 0 0 0 3px var(--active-glow) inset;
+    transform: translateY(3px);
+}
+
+/* Keyboard focus visibility (accessibility) */
+.key:focus-visible {
     z-index: 2;
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.octave-btn:focus-visible,
+.toggle-container input:focus-visible,
+.volume-control input:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Hidden notes styling */
+.key.notes-hidden .note-name,
+.key.notes-hidden .octave {
+    color: transparent;
+    transition: color 0.2s ease;
 }
 
 /* Responsive design for different screen sizes */
@@ -187,13 +345,6 @@ h1 {
     .piano {
         aspect-ratio: 3 / 1;
         max-width: 900px;
-    }
-}
-
-@media (min-width: 1201px) {
-    .piano {
-        max-width: 1000px;
-        aspect-ratio: 3 / 1;
     }
 }
 
@@ -205,24 +356,29 @@ h1 {
 }
 
 @media (max-width: 768px) {
-    .piano {
-        aspect-ratio: 4 / 1;
-        padding: 20px 15px 15px;
+    .controls {
+        gap: 10px 14px;
+        padding: 10px 14px;
     }
-    
+
+    .piano {
+        aspect-ratio: 2.2 / 1;
+        padding: 20px 12px 15px;
+    }
+
     .white {
         border-width: 1px;
-        box-shadow: 0 4px 0 #ccc;
+        box-shadow: 0 4px 0 var(--white-key-shadow);
     }
-    
+
     .black {
-        box-shadow: 0 4px 0 #111;
+        box-shadow: 0 4px 0 var(--black-key-shadow);
     }
-    
+
     .keyboard-guide p {
         display: none;
     }
-    
+
     .keyboard-guide::after {
         content: "Tap the keys to play!";
         display: block;
@@ -231,52 +387,32 @@ h1 {
 
 @media (max-width: 576px) {
     .container {
-        padding: 10px;
+        padding: 0 4px;
     }
-    
+
     .piano {
-        aspect-ratio: 3.5 / 1;
-        padding: 15px 10px 15px;
+        aspect-ratio: 1.8 / 1;
+        padding: 15px 8px 15px;
+    }
+
+    .octave-label {
+        min-width: 80px;
+        font-size: 0.8rem;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 420px) {
     .piano {
-        aspect-ratio: 3 / 1;
-        padding: 15px 10px 10px;
+        aspect-ratio: 1.5 / 1;
+        padding: 12px 6px 10px;
     }
-    
+
     .white {
         border-width: 1px;
-        box-shadow: 0 3px 0 #ccc;
+        box-shadow: 0 3px 0 var(--white-key-shadow);
     }
-    
+
     .black {
-        box-shadow: 0 3px 0 #111;
+        box-shadow: 0 3px 0 var(--black-key-shadow);
     }
-}
-
-/* Active state styling for keys */
-.white.active, .white:active {
-    background-color: #f0f0f0;
-    box-shadow: 0 2px 0 #ccc;
-    transform: translateY(3px);
-}
-
-.black.active, .black:active {
-    background-color: #222; /* Keep background dark */
-    box-shadow: 0 2px 0 #111; /* Keep shadow dark to match key */
-    transform: translateY(3px); /* Use the same vertical movement as white keys */ 
-}
-
-/* Hidden notes styling */
-.key.notes-hidden .note-name,
-.key.notes-hidden .octave {
-    color: transparent;
-    transition: color 0.2s ease;
-}
-
-/* Transition effects for keys */
-.key {
-    transition: color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
 }
