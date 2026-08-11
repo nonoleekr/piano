@@ -1,15 +1,16 @@
 import { songs, getSongById } from './songs/index.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const keys = Array.from(document.querySelectorAll('.key'));
     const showNotesCheckbox = document.getElementById('show-notes');
     const sustainCheckbox = document.getElementById('sustain-toggle');
     const volumeSlider = document.getElementById('volume');
-    const octaveDownBtn = document.getElementById('octave-down');
-    const octaveUpBtn = document.getElementById('octave-up');
-    const octaveLabel = document.getElementById('octave-label');
     const nowPlayingEl = document.getElementById('now-playing-notes');
     const pianoEl = document.querySelector('.piano');
+    const keysStripEl = document.querySelector('.keys-strip');
+    const whiteKeysContainer = document.querySelector('.white-keys');
+    const blackKeysContainer = document.querySelector('.black-keys');
+    const keyRangeSlider = document.getElementById('key-range');
+    const keyRangeLabel = document.getElementById('key-range-label');
 
     // Song player (practice mode) elements
     const songSelect = document.getElementById('song-select');
@@ -25,20 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Note name helpers ----
     const NOTE_SEQUENCE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const FLAT_NAMES = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
-    const MIN_OCTAVE_SHIFT = -2;
-    const MAX_OCTAVE_SHIFT = 2;
+    // How far each black key sits into its octave, in white-key-width units from
+    // that octave's C (e.g. C# sits 0.7 of a white key past C). Mirrors the
+    // original hand-tuned positions from the fixed 2-octave layout.
+    const BLACK_KEY_OFFSET = { 'C#': 0.7, 'D#': 1.7, 'F#': 3.7, 'G#': 4.7, 'A#': 5.7 };
 
     function parseNote(note) {
         const match = note.match(/^([A-G]#?)(\d)$/);
         return { pitchClass: match[1], octave: parseInt(match[2], 10) };
-    }
-
-    function transposeNote(note, semitones) {
-        const { pitchClass, octave } = parseNote(note);
-        const index = octave * 12 + NOTE_SEQUENCE.indexOf(pitchClass) + semitones;
-        const newOctave = Math.floor(index / 12);
-        const newPitchClass = NOTE_SEQUENCE[((index % 12) + 12) % 12];
-        return `${newPitchClass}${newOctave}`;
     }
 
     function noteToFileName(note) {
@@ -46,10 +41,94 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${FLAT_NAMES[pitchClass] || pitchClass}${octave}`;
     }
 
-    // The note actually sounded for a key's base (unshifted) note, given the current octave shift.
-    function currentNoteFor(baseNote) {
-        return transposeNote(baseNote, octaveShift * 12);
+    // ---- Build the keyboard: a wide strip spanning C1–C7, of which a 2-octave
+    // window is visible at a time. Each key has a permanent, fixed note identity
+    // (no relabeling) — sliding the range only changes which keys are visible
+    // and which are bound to computer-keyboard shortcuts.
+    const RANGE_LOW_OCTAVE = 1;
+    const RANGE_HIGH_OCTAVE = 7; // inclusive; only C is used in this final octave
+    const VISIBLE_WHITE_COUNT = 15; // matches the original fixed 2-octave layout
+
+    // Ergonomic touch-typing layout (left hand A S D F G, right hand J K L ; ',
+    // J = Middle C), applied to whichever keys are currently visible — identical
+    // shortcut assignment to before, just rebound to different real keys as the
+    // range slides instead of relabeling the same 25 keys.
+    const WHITE_SHORTCUTS = [
+        { code: 'KeyA', label: 'A' }, { code: 'KeyS', label: 'S' }, { code: 'KeyD', label: 'D' },
+        { code: 'KeyF', label: 'F' }, { code: 'KeyG', label: 'G' }, { code: 'KeyX', label: 'X' },
+        { code: 'KeyV', label: 'V' }, { code: 'KeyJ', label: 'J' }, { code: 'KeyK', label: 'K' },
+        { code: 'KeyL', label: 'L' }, { code: 'Semicolon', label: ';' }, { code: 'Quote', label: "'" },
+        { code: 'KeyM', label: 'M' }, { code: 'Period', label: '.' }, { code: 'Slash', label: '/' },
+    ];
+    const BLACK_SHORTCUTS = [
+        { code: 'KeyW', label: 'W' }, { code: 'KeyE', label: 'E' }, { code: 'KeyT', label: 'T' },
+        { code: 'KeyZ', label: 'Z' }, { code: 'KeyC', label: 'C' }, { code: 'KeyI', label: 'I' },
+        { code: 'KeyO', label: 'O' }, { code: 'BracketLeft', label: '[' }, { code: 'KeyN', label: 'N' },
+        { code: 'Comma', label: ',' },
+    ];
+
+    function createKeyElement(note, pitchClass, octave, isBlack) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `key ${isBlack ? 'black' : 'white'}`;
+        button.dataset.note = note;
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', note);
+
+        const shortcut = document.createElement('span');
+        shortcut.className = 'key-shortcut';
+        button.appendChild(shortcut);
+
+        const name = document.createElement('span');
+        name.className = 'note-name';
+        name.textContent = pitchClass;
+        button.appendChild(name);
+
+        const oct = document.createElement('span');
+        oct.className = 'octave';
+        oct.textContent = String(octave);
+        button.appendChild(oct);
+
+        return button;
     }
+
+    function buildKeyboard() {
+        const whiteKeyElements = [];
+        const blackKeyElements = [];
+        let whiteIndex = 0;
+
+        for (let octave = RANGE_LOW_OCTAVE; octave <= RANGE_HIGH_OCTAVE; octave++) {
+            const octaveStartWhiteIndex = whiteIndex;
+            NOTE_SEQUENCE.forEach(pitchClass => {
+                if (octave === RANGE_HIGH_OCTAVE && pitchClass !== 'C') return; // stop exactly at C7
+                const note = `${pitchClass}${octave}`;
+                const isBlack = pitchClass.includes('#');
+                const keyEl = createKeyElement(note, pitchClass, octave, isBlack);
+
+                if (isBlack) {
+                    const position = octaveStartWhiteIndex + BLACK_KEY_OFFSET[pitchClass];
+                    keyEl.style.left = `${(position / TOTAL_WHITE_KEYS) * 100}%`;
+                    keyEl.dataset.whiteAnchor = String(Math.floor(position));
+                    blackKeysContainer.appendChild(keyEl);
+                    blackKeyElements.push(keyEl);
+                } else {
+                    whiteKeysContainer.appendChild(keyEl);
+                    whiteKeyElements.push(keyEl);
+                    whiteIndex++;
+                }
+            });
+        }
+
+        return { whiteKeyElements, blackKeyElements };
+    }
+
+    const TOTAL_WHITE_KEYS = (RANGE_HIGH_OCTAVE - RANGE_LOW_OCTAVE) * 7 + 1; // 43
+    const { whiteKeyElements, blackKeyElements } = buildKeyboard();
+    const keys = [...whiteKeyElements, ...blackKeyElements];
+    const noteToKeyElement = new Map(keys.map(key => [key.dataset.note, key]));
+
+    pianoEl.style.setProperty('--total-white', TOTAL_WHITE_KEYS);
+    pianoEl.style.setProperty('--visible-white', VISIBLE_WHITE_COUNT);
 
     // ---- Note visibility toggle ----
     const notesVisible = localStorage.getItem('showNotes') !== 'false';
@@ -70,9 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioCtx = null;
     let masterGain = null;
     const bufferCache = new Map();   // fileName -> Promise<AudioBuffer>
-    const activeVoices = new Map();  // baseNote -> { source, gain }
-    const pressedKeys = new Set();   // baseNote currently physically held
-    const pressTokens = new Map();   // baseNote -> latest press token (guards async races)
+    const activeVoices = new Map();  // note -> { source, gain }
+    const pressedKeys = new Set();   // note currently physically held
+    const pressTokens = new Map();   // note -> latest press token (guards async races)
 
     function getAudioContext() {
         if (!audioCtx) {
@@ -104,28 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return promise;
     }
 
-    function preloadCurrentRange() {
-        keys.forEach(key => {
-            loadBuffer(noteToFileName(currentNoteFor(key.dataset.note)));
-        });
+    function preloadAllNotes() {
+        keys.forEach(key => loadBuffer(noteToFileName(key.dataset.note)));
     }
 
-    // Keep each key's visible note name / octave and accessible label in sync
-    // with what will actually sound (they drift apart when the octave is shifted).
-    function updateKeyLabels() {
-        keys.forEach(key => {
-            const { pitchClass, octave } = parseNote(currentNoteFor(key.dataset.note));
-            key.querySelector('.note-name').textContent = pitchClass;
-            key.querySelector('.octave').textContent = octave;
-            const shortcutLabel = key.dataset.keyLabel;
-            key.setAttribute('aria-label', shortcutLabel
-                ? `${pitchClass}${octave}, keyboard shortcut ${shortcutLabel}`
-                : `${pitchClass}${octave}`);
-        });
-    }
-
-    function stopVoice(baseNote) {
-        const voice = activeVoices.get(baseNote);
+    function stopVoice(note) {
+        const voice = activeVoices.get(note);
         if (!voice) return;
         const ctx = getAudioContext();
         const now = ctx.currentTime;
@@ -134,35 +197,35 @@ document.addEventListener('DOMContentLoaded', () => {
         gain.gain.setValueAtTime(gain.gain.value, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.25);
         source.stop(now + 0.26);
-        activeVoices.delete(baseNote);
+        activeVoices.delete(note);
     }
 
-    function playNote(baseNote) {
+    function playNote(note) {
         const ctx = getAudioContext();
-        const fileName = noteToFileName(currentNoteFor(baseNote));
+        const fileName = noteToFileName(note);
 
         // Retriggering a still-sounding note: cut the old voice short first.
-        stopVoice(baseNote);
+        stopVoice(note);
 
         // Token guards against a stale, still-loading press overwriting a newer one.
-        const token = Symbol(baseNote);
-        pressTokens.set(baseNote, token);
+        const token = Symbol(note);
+        pressTokens.set(note, token);
 
         loadBuffer(fileName).then(buffer => {
-            if (!buffer || pressTokens.get(baseNote) !== token) return;
+            if (!buffer || pressTokens.get(note) !== token) return;
             const source = ctx.createBufferSource();
             source.buffer = buffer;
             const gain = ctx.createGain();
             gain.gain.value = 1;
             source.connect(gain).connect(masterGain);
             source.start(0);
-            activeVoices.set(baseNote, { source, gain });
+            activeVoices.set(note, { source, gain });
             updateNowPlaying();
         });
     }
 
     function updateNowPlaying() {
-        const notes = Array.from(activeVoices.keys()).map(currentNoteFor);
+        const notes = Array.from(activeVoices.keys());
         nowPlayingEl.textContent = notes.length ? notes.join(' · ') : '—';
     }
 
@@ -173,8 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sustainCheckbox.checked) {
             // Release any notes that are ringing only because sustain held them.
             Array.from(activeVoices.keys())
-                .filter(baseNote => !pressedKeys.has(baseNote))
-                .forEach(baseNote => { stopVoice(baseNote); updateNowPlaying(); });
+                .filter(note => !pressedKeys.has(note))
+                .forEach(note => { stopVoice(note); updateNowPlaying(); });
         }
     });
 
@@ -185,35 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ---- Octave shift ----
-    let octaveShift = 0;
-
-    function updateOctaveLabel() {
-        octaveLabel.textContent = `Octave ${3 + octaveShift}–${5 + octaveShift}`;
-        octaveDownBtn.disabled = octaveShift <= MIN_OCTAVE_SHIFT;
-        octaveUpBtn.disabled = octaveShift >= MAX_OCTAVE_SHIFT;
-    }
-
-    function shiftOctave(delta) {
-        const next = octaveShift + delta;
-        if (next < MIN_OCTAVE_SHIFT || next > MAX_OCTAVE_SHIFT) return;
-        // Changing octave mid-note would bend the pitch of ringing notes, so stop everything first.
-        Array.from(activeVoices.keys()).forEach(stopVoice);
-        pressedKeys.forEach(baseNote => {
-            const keyEl = keys.find(k => k.dataset.note === baseNote);
-            if (keyEl) releaseKeyVisual(keyEl);
-        });
-        pressedKeys.clear();
-        octaveShift = next;
-        updateOctaveLabel();
-        updateKeyLabels();
-        updateNowPlaying();
-        preloadCurrentRange();
-    }
-
-    octaveDownBtn.addEventListener('click', () => shiftOctave(-1));
-    octaveUpBtn.addEventListener('click', () => shiftOctave(1));
-
     // ---- Key press/release ----
     function releaseKeyVisual(keyEl) {
         keyEl.classList.remove('active');
@@ -221,28 +255,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function pressKey(keyEl) {
-        const baseNote = keyEl.dataset.note;
-        if (!baseNote || pressedKeys.has(baseNote)) return;
-        pressedKeys.add(baseNote);
+        const note = keyEl.dataset.note;
+        if (!note || pressedKeys.has(note)) return;
+        pressedKeys.add(note);
         keyEl.classList.add('active');
         keyEl.setAttribute('aria-pressed', 'true');
-        playNote(baseNote);
+        playNote(note);
     }
 
     function releaseKey(keyEl) {
-        const baseNote = keyEl.dataset.note;
-        if (!baseNote || !pressedKeys.has(baseNote)) return;
-        pressedKeys.delete(baseNote);
+        const note = keyEl.dataset.note;
+        if (!note || !pressedKeys.has(note)) return;
+        pressedKeys.delete(note);
         releaseKeyVisual(keyEl);
         if (!sustainCheckbox.checked) {
-            stopVoice(baseNote);
+            stopVoice(note);
             updateNowPlaying();
         }
     }
 
     // Same press/release contract as pressKey()/releaseKey(), for notes that have
-    // no corresponding on-screen key (e.g. a song note above the visible C3–C5
-    // range). Sound plays correctly; there's just no key to highlight.
+    // no corresponding key at all (outside the full C1–C7 range). Sound plays
+    // correctly; there's just no key to highlight.
     function playOffScreenNote(note) {
         if (pressedKeys.has(note)) return;
         pressedKeys.add(note);
@@ -258,19 +292,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ---- Sliding key range ----
+    // The visible window is described by windowStart: the index (into the 43
+    // white keys, C1=0) of the leftmost visible white key. Sliding never affects
+    // any already-sounding note — only which keys are visible and which are
+    // bound to computer-keyboard shortcuts.
+    const MAX_WINDOW_START = TOTAL_WHITE_KEYS - VISIBLE_WHITE_COUNT;
+    const keyboardMap = {}; // event.code -> currently-bound keyEl
+    let windowStart = Number(keyRangeSlider.value);
+
+    function getVisibleWhiteKeys() {
+        return whiteKeyElements.slice(windowStart, windowStart + VISIBLE_WHITE_COUNT);
+    }
+
+    function getVisibleBlackKeys() {
+        // A black key's anchor is the white key just before it — it only belongs
+        // to this window if that white key AND the one after it are both visible,
+        // i.e. anchor must leave room for one more white key within the window.
+        return blackKeyElements.filter(keyEl => {
+            const anchor = Number(keyEl.dataset.whiteAnchor);
+            return anchor >= windowStart && anchor < windowStart + VISIBLE_WHITE_COUNT - 1;
+        });
+    }
+
+    function clearShortcut(keyEl) {
+        delete keyEl.dataset.key;
+        delete keyEl.dataset.keyLabel;
+        keyEl.querySelector('.key-shortcut').textContent = '';
+        keyEl.setAttribute('aria-label', keyEl.dataset.note);
+    }
+
+    function applyShortcut(keyEl, shortcut) {
+        keyEl.dataset.key = shortcut.code;
+        keyEl.dataset.keyLabel = shortcut.label;
+        keyEl.querySelector('.key-shortcut').textContent = shortcut.label;
+        keyEl.setAttribute('aria-label', `${keyEl.dataset.note}, keyboard shortcut ${shortcut.label}`);
+    }
+
+    function updateActiveShortcuts() {
+        keys.forEach(clearShortcut);
+        Object.keys(keyboardMap).forEach(code => delete keyboardMap[code]);
+
+        getVisibleWhiteKeys().forEach((keyEl, i) => {
+            applyShortcut(keyEl, WHITE_SHORTCUTS[i]);
+            keyboardMap[WHITE_SHORTCUTS[i].code] = keyEl;
+        });
+        getVisibleBlackKeys().forEach((keyEl, i) => {
+            applyShortcut(keyEl, BLACK_SHORTCUTS[i]);
+            keyboardMap[BLACK_SHORTCUTS[i].code] = keyEl;
+        });
+    }
+
+    function updateRangeLabel() {
+        const first = whiteKeyElements[windowStart].dataset.note;
+        const last = whiteKeyElements[windowStart + VISIBLE_WHITE_COUNT - 1].dataset.note;
+        const text = `${first} – ${last}`;
+        keyRangeLabel.textContent = text;
+        keyRangeSlider.setAttribute('aria-valuetext', text);
+    }
+
+    function applyWindow(start) {
+        windowStart = Math.max(0, Math.min(MAX_WINDOW_START, start));
+        const offsetPercent = -(windowStart * 100 / TOTAL_WHITE_KEYS);
+        keysStripEl.style.setProperty('--strip-offset', `${offsetPercent}%`);
+        updateActiveShortcuts();
+        updateRangeLabel();
+    }
+
+    keyRangeSlider.min = '0';
+    keyRangeSlider.max = String(MAX_WINDOW_START);
+    keyRangeSlider.addEventListener('input', () => {
+        applyWindow(Number(keyRangeSlider.value));
+    });
+
     // ---- Song player (practice mode / auto-play) ----
     // Reuses pressKey()/releaseKey() exactly like mouse, touch, and keyboard input do,
     // so autoplay gets correct highlighting, aria-pressed, "Now playing", and sustain
-    // behavior for free without a second audio path.
-    const noteToKeyElement = new Map(keys.map(key => [key.dataset.note, key]));
-
+    // behavior for free without a second audio path. Every note in a song looks up
+    // a real key directly by name — no range-locking needed, since keys are never
+    // relabeled and the lookup doesn't depend on the current slide position.
     const playbackState = {
         status: 'idle',        // 'idle' | 'playing' | 'paused'
         song: null,
         stepIndex: 0,
         timeoutId: null,
         bpm: 100,
-        savedOctaveShift: null,
         currentStepKeys: [],
         currentStepOffScreenNotes: [],
     };
@@ -325,18 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
         songStopBtn.disabled = status === 'idle';
     }
 
-    // Songs reference real note names (e.g. "C4"), so playback needs the piano
-    // sitting at octaveShift 0 while it plays; the user's own shift is restored after.
-    function setPlaybackControlsLocked(locked) {
-        songSelect.disabled = locked;
-        if (locked) {
-            octaveDownBtn.disabled = true;
-            octaveUpBtn.disabled = true;
-        } else {
-            updateOctaveLabel();
-        }
-    }
-
     function scheduleStep(index) {
         releaseStepKeys();
 
@@ -356,8 +450,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 pressKey(keyEl);
                 playbackState.currentStepKeys.push(keyEl);
             } else {
-                // Note is outside the visible keyboard (e.g. above C5) — still play
-                // it accurately, just without a key to highlight.
+                // Note is outside the full C1–C7 range — still play it accurately,
+                // just without a key to highlight.
                 playOffScreenNote(note);
                 playbackState.currentStepOffScreenNotes.push(note);
             }
@@ -382,16 +476,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         playbackState.song = song;
         playbackState.bpm = Number(songTempoSlider.value) || song.bpm;
-        playbackState.savedOctaveShift = octaveShift;
         playbackState.currentStepKeys = [];
         playbackState.currentStepOffScreenNotes = [];
-        if (octaveShift !== 0) {
-            octaveShift = 0;
-            updateKeyLabels();
-            preloadCurrentRange();
-        }
 
-        setPlaybackControlsLocked(true);
+        songSelect.disabled = true;
         playbackState.status = 'playing';
         updateTransportButtons();
         scheduleStep(0);
@@ -405,15 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTransportButtons();
     }
 
-    function restoreOctaveAfterPlayback() {
-        if (playbackState.savedOctaveShift !== null && playbackState.savedOctaveShift !== octaveShift) {
-            octaveShift = playbackState.savedOctaveShift;
-            updateKeyLabels();
-            preloadCurrentRange();
-        }
-        playbackState.savedOctaveShift = null;
-    }
-
     function resetSongUI() {
         clearNextHints();
         songCurrentNoteEl.textContent = '—';
@@ -425,24 +504,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (playbackState.status === 'idle') return;
         clearTimeout(playbackState.timeoutId);
         releaseStepKeys();
-        restoreOctaveAfterPlayback();
         playbackState.status = 'idle';
         playbackState.stepIndex = 0;
         resetSongUI();
-        setPlaybackControlsLocked(false);
+        songSelect.disabled = false;
         updateTransportButtons();
     }
 
     function finishSong() {
         clearTimeout(playbackState.timeoutId);
         releaseStepKeys();
-        restoreOctaveAfterPlayback();
         playbackState.status = 'idle';
         playbackState.stepIndex = 0;
         clearNextHints();
         songCurrentNoteEl.textContent = 'Done!';
         songNextNoteEl.textContent = '—';
-        setPlaybackControlsLocked(false);
+        songSelect.disabled = false;
         updateTransportButtons();
     }
 
@@ -464,9 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
         preloadSongNotes(song);
     }
 
-    // Warms the buffer cache for any note the song uses that's above/below the
-    // visible keyboard (preloadCurrentRange() only covers the 25 on-screen keys),
-    // so off-screen notes don't hitch on their first occurrence during playback.
+    // Defensive fallback for any song note outside the full C1–C7 range
+    // (preloadAllNotes() already covers everything within it).
     function preloadSongNotes(song) {
         song.notes.forEach(step => {
             normalizeStepNotes(step).forEach(note => {
@@ -502,8 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMouseDown = false;
 
     keys.forEach(key => {
-        key.setAttribute('aria-pressed', 'false');
-
         key.addEventListener('mousedown', () => {
             isMouseDown = true;
             pressKey(key);
@@ -535,24 +609,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Physical keyboard shortcuts ----
     // Keyed by event.code (physical key position) rather than event.key, so the
-    // ergonomic layout below stays correct regardless of Shift/Caps Lock or keyboard language.
-    const keyboardMap = {};
-    keys.forEach(key => {
-        const shortcut = key.getAttribute('data-key');
-        if (shortcut) keyboardMap[shortcut] = key;
-    });
+    // ergonomic layout stays correct regardless of Shift/Caps Lock or keyboard
+    // language. Bindings are rebuilt by updateActiveShortcuts() whenever the
+    // visible range slides.
+    //
+    // heldByPhysicalKey records exactly which key element a keydown actually
+    // triggered, so if the range slides while a key is held, the matching keyup
+    // still releases the right element — not whatever keyboardMap happens to
+    // point to by then.
+    const heldByPhysicalKey = new Map(); // event.code -> keyEl
 
     document.addEventListener('keydown', (event) => {
         getAudioContext();
+        if (event.repeat) return;
         const mappedKey = keyboardMap[event.code];
-        if (mappedKey && !event.repeat) {
+        if (mappedKey) {
             pressKey(mappedKey);
+            heldByPhysicalKey.set(event.code, mappedKey);
         }
     });
 
     document.addEventListener('keyup', (event) => {
-        const mappedKey = keyboardMap[event.code];
-        if (mappedKey) releaseKey(mappedKey);
+        const heldKey = heldByPhysicalKey.get(event.code);
+        if (heldKey) {
+            releaseKey(heldKey);
+            heldByPhysicalKey.delete(event.code);
+        }
     });
 
     // ---- Touch interaction (glissando across keys) ----
@@ -595,8 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Init ----
     document.addEventListener('pointerdown', getAudioContext, { once: true });
     document.addEventListener('keydown', getAudioContext, { once: true });
-    updateOctaveLabel();
-    updateKeyLabels();
-    preloadCurrentRange();
+    preloadAllNotes();
+    applyWindow(windowStart);
     initSongPlayer();
 });
