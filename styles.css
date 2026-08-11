@@ -154,6 +154,111 @@ h1 {
     cursor: not-allowed;
 }
 
+/* Song player card (practice mode / auto-play) */
+.song-player {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    padding: 12px 18px;
+    box-shadow: 0 2px 10px rgba(20, 25, 35, 0.06);
+}
+
+.song-player-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 18px;
+}
+
+#song-select {
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.transport-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.transport-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.transport-btn:hover:not(:disabled) {
+    background-color: #f0f4f9;
+}
+
+.transport-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.transport-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#song-play {
+    color: var(--accent-strong);
+    border-color: var(--accent-strong);
+}
+
+.tempo-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tempo-control input[type="range"] {
+    width: 110px;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+}
+
+.tempo-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 60px;
+}
+
+.song-status-row {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.song-status-item strong {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.song-progress {
+    width: 100%;
+    max-width: 260px;
+    height: 8px;
+    accent-color: var(--accent-strong);
+}
+
 /* Now playing indicator */
 .now-playing {
     margin-bottom: 16px;
@@ -351,6 +456,16 @@ h1 {
     transform: translateY(3px);
 }
 
+/* "Play this next" hint for practice mode — distinct from .active so a
+   sounding note and an upcoming hint never look the same. */
+.key.next-hint:not(.active) {
+    box-shadow: 0 6px 0 var(--white-key-shadow), 0 0 0 3px var(--accent) inset;
+}
+
+.black.next-hint:not(.active) {
+    box-shadow: 0 6px 0 var(--black-key-shadow), 0 0 0 3px var(--accent) inset;
+}
+
 /* Keyboard focus visibility (accessibility) */
 .key:focus-visible {
     z-index: 2;
@@ -361,6 +476,13 @@ h1 {
 .octave-btn:focus-visible,
 .toggle-container input:focus-visible,
 .volume-control input:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.transport-btn:focus-visible,
+#song-select:focus-visible,
+.tempo-control input:focus-visible {
     outline: 3px solid var(--accent);
     outline-offset: 2px;
 }
@@ -391,6 +513,14 @@ h1 {
     .controls {
         gap: 10px 14px;
         padding: 10px 14px;
+    }
+
+    .song-player {
+        padding: 10px 14px;
+    }
+
+    .song-progress {
+        max-width: 100%;
     }
 
     .piano {

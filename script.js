@@ -1,3 +1,5 @@
+import { songs, getSongById } from './songs/index.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const keys = Array.from(document.querySelectorAll('.key'));
     const showNotesCheckbox = document.getElementById('show-notes');
@@ -8,6 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const octaveLabel = document.getElementById('octave-label');
     const nowPlayingEl = document.getElementById('now-playing-notes');
     const pianoEl = document.querySelector('.piano');
+
+    // Song player (practice mode) elements
+    const songSelect = document.getElementById('song-select');
+    const songPlayBtn = document.getElementById('song-play');
+    const songPauseBtn = document.getElementById('song-pause');
+    const songStopBtn = document.getElementById('song-stop');
+    const songTempoSlider = document.getElementById('song-tempo');
+    const songTempoValue = document.getElementById('song-tempo-value');
+    const songCurrentNoteEl = document.getElementById('song-current-note');
+    const songNextNoteEl = document.getElementById('song-next-note');
+    const songProgressEl = document.getElementById('song-progress');
 
     // ---- Note name helpers ----
     const NOTE_SEQUENCE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -227,6 +240,222 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ---- Song player (practice mode / auto-play) ----
+    // Reuses pressKey()/releaseKey() exactly like mouse, touch, and keyboard input do,
+    // so autoplay gets correct highlighting, aria-pressed, "Now playing", and sustain
+    // behavior for free without a second audio path.
+    const noteToKeyElement = new Map(keys.map(key => [key.dataset.note, key]));
+
+    const playbackState = {
+        status: 'idle',        // 'idle' | 'playing' | 'paused'
+        song: null,
+        stepIndex: 0,
+        timeoutId: null,
+        bpm: 100,
+        savedOctaveShift: null,
+        currentStepKeys: [],
+    };
+
+    function getSelectedSong() {
+        return getSongById(songSelect.value) || songs[0];
+    }
+
+    function normalizeStepNotes(step) {
+        if (!step || step.note == null) return [];
+        return Array.isArray(step.note) ? step.note : [step.note];
+    }
+
+    function msPerBeat() {
+        return 60000 / playbackState.bpm;
+    }
+
+    // Releases whatever the current step is holding down (respects Sustain,
+    // same as releasing a manually-held key would).
+    function releaseStepKeys() {
+        playbackState.currentStepKeys.forEach(releaseKey);
+        playbackState.currentStepKeys = [];
+    }
+
+    function clearNextHints() {
+        keys.forEach(keyEl => keyEl.classList.remove('next-hint'));
+    }
+
+    function updateSongUI(step, index, total) {
+        const currentNotes = normalizeStepNotes(step);
+        songCurrentNoteEl.textContent = currentNotes.length ? currentNotes.join(' + ') : '—';
+
+        clearNextHints();
+        const nextNotes = normalizeStepNotes(playbackState.song.notes[index + 1]);
+        songNextNoteEl.textContent = nextNotes.length ? nextNotes.join(' + ') : '—';
+        nextNotes.forEach(note => {
+            const keyEl = noteToKeyElement.get(note);
+            if (keyEl) keyEl.classList.add('next-hint');
+        });
+
+        songProgressEl.max = total;
+        songProgressEl.value = index;
+    }
+
+    function updateTransportButtons() {
+        const { status } = playbackState;
+        songPlayBtn.disabled = status === 'playing';
+        songPlayBtn.setAttribute('aria-label', status === 'paused' ? 'Resume song' : 'Play song');
+        songPauseBtn.disabled = status !== 'playing';
+        songStopBtn.disabled = status === 'idle';
+    }
+
+    // Songs reference real note names (e.g. "C4"), so playback needs the piano
+    // sitting at octaveShift 0 while it plays; the user's own shift is restored after.
+    function setPlaybackControlsLocked(locked) {
+        songSelect.disabled = locked;
+        if (locked) {
+            octaveDownBtn.disabled = true;
+            octaveUpBtn.disabled = true;
+        } else {
+            updateOctaveLabel();
+        }
+    }
+
+    function scheduleStep(index) {
+        releaseStepKeys();
+
+        const song = playbackState.song;
+        if (!song || index >= song.notes.length) {
+            finishSong();
+            return;
+        }
+
+        playbackState.stepIndex = index;
+        const step = song.notes[index];
+        updateSongUI(step, index, song.notes.length);
+
+        normalizeStepNotes(step).forEach(note => {
+            const keyEl = noteToKeyElement.get(note);
+            if (!keyEl) return;
+            pressKey(keyEl);
+            playbackState.currentStepKeys.push(keyEl);
+        });
+
+        const ms = step.beats * msPerBeat();
+        playbackState.timeoutId = setTimeout(() => scheduleStep(index + 1), ms);
+    }
+
+    function startSong() {
+        if (playbackState.status === 'playing') return; // guards rapid double-clicks
+
+        if (playbackState.status === 'paused') {
+            playbackState.status = 'playing';
+            updateTransportButtons();
+            scheduleStep(playbackState.stepIndex);
+            return;
+        }
+
+        const song = getSelectedSong();
+        if (!song || !song.notes.length) return;
+
+        playbackState.song = song;
+        playbackState.bpm = Number(songTempoSlider.value) || song.bpm;
+        playbackState.savedOctaveShift = octaveShift;
+        playbackState.currentStepKeys = [];
+        if (octaveShift !== 0) {
+            octaveShift = 0;
+            updateKeyLabels();
+            preloadCurrentRange();
+        }
+
+        setPlaybackControlsLocked(true);
+        playbackState.status = 'playing';
+        updateTransportButtons();
+        scheduleStep(0);
+    }
+
+    function pauseSong() {
+        if (playbackState.status !== 'playing') return;
+        clearTimeout(playbackState.timeoutId);
+        releaseStepKeys();
+        playbackState.status = 'paused';
+        updateTransportButtons();
+    }
+
+    function restoreOctaveAfterPlayback() {
+        if (playbackState.savedOctaveShift !== null && playbackState.savedOctaveShift !== octaveShift) {
+            octaveShift = playbackState.savedOctaveShift;
+            updateKeyLabels();
+            preloadCurrentRange();
+        }
+        playbackState.savedOctaveShift = null;
+    }
+
+    function resetSongUI() {
+        clearNextHints();
+        songCurrentNoteEl.textContent = '—';
+        songNextNoteEl.textContent = '—';
+        songProgressEl.value = 0;
+    }
+
+    function stopSong() {
+        if (playbackState.status === 'idle') return;
+        clearTimeout(playbackState.timeoutId);
+        releaseStepKeys();
+        restoreOctaveAfterPlayback();
+        playbackState.status = 'idle';
+        playbackState.stepIndex = 0;
+        resetSongUI();
+        setPlaybackControlsLocked(false);
+        updateTransportButtons();
+    }
+
+    function finishSong() {
+        clearTimeout(playbackState.timeoutId);
+        releaseStepKeys();
+        restoreOctaveAfterPlayback();
+        playbackState.status = 'idle';
+        playbackState.stepIndex = 0;
+        clearNextHints();
+        songCurrentNoteEl.textContent = 'Done!';
+        songNextNoteEl.textContent = '—';
+        setPlaybackControlsLocked(false);
+        updateTransportButtons();
+    }
+
+    function loadSongOptions() {
+        songs.forEach(song => {
+            const option = document.createElement('option');
+            option.value = song.id;
+            option.textContent = `${song.title} — ${song.artist}`;
+            songSelect.appendChild(option);
+        });
+    }
+
+    function applySongDefaults(song) {
+        songTempoSlider.value = song.bpm;
+        songTempoValue.textContent = `${song.bpm} BPM`;
+        playbackState.bpm = song.bpm;
+        songProgressEl.max = song.notes.length;
+        songProgressEl.value = 0;
+    }
+
+    songSelect.addEventListener('change', () => {
+        if (playbackState.status !== 'idle') stopSong();
+        applySongDefaults(getSelectedSong());
+    });
+
+    songTempoSlider.addEventListener('input', () => {
+        playbackState.bpm = Number(songTempoSlider.value);
+        songTempoValue.textContent = `${songTempoSlider.value} BPM`;
+    });
+
+    songPlayBtn.addEventListener('click', startSong);
+    songPauseBtn.addEventListener('click', pauseSong);
+    songStopBtn.addEventListener('click', stopSong);
+
+    function initSongPlayer() {
+        loadSongOptions();
+        const song = getSelectedSong();
+        if (song) applySongDefaults(song);
+        updateTransportButtons();
+    }
+
     // ---- Mouse interaction ----
     let isMouseDown = false;
 
@@ -327,4 +556,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateOctaveLabel();
     updateKeyLabels();
     preloadCurrentRange();
+    initSongPlayer();
 });
