@@ -240,6 +240,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Same press/release contract as pressKey()/releaseKey(), for notes that have
+    // no corresponding on-screen key (e.g. a song note above the visible C3–C5
+    // range). Sound plays correctly; there's just no key to highlight.
+    function playOffScreenNote(note) {
+        if (pressedKeys.has(note)) return;
+        pressedKeys.add(note);
+        playNote(note);
+    }
+
+    function releaseOffScreenNote(note) {
+        if (!pressedKeys.has(note)) return;
+        pressedKeys.delete(note);
+        if (!sustainCheckbox.checked) {
+            stopVoice(note);
+            updateNowPlaying();
+        }
+    }
+
     // ---- Song player (practice mode / auto-play) ----
     // Reuses pressKey()/releaseKey() exactly like mouse, touch, and keyboard input do,
     // so autoplay gets correct highlighting, aria-pressed, "Now playing", and sustain
@@ -254,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bpm: 100,
         savedOctaveShift: null,
         currentStepKeys: [],
+        currentStepOffScreenNotes: [],
     };
 
     function getSelectedSong() {
@@ -274,6 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function releaseStepKeys() {
         playbackState.currentStepKeys.forEach(releaseKey);
         playbackState.currentStepKeys = [];
+        playbackState.currentStepOffScreenNotes.forEach(releaseOffScreenNote);
+        playbackState.currentStepOffScreenNotes = [];
     }
 
     function clearNextHints() {
@@ -331,9 +352,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         normalizeStepNotes(step).forEach(note => {
             const keyEl = noteToKeyElement.get(note);
-            if (!keyEl) return;
-            pressKey(keyEl);
-            playbackState.currentStepKeys.push(keyEl);
+            if (keyEl) {
+                pressKey(keyEl);
+                playbackState.currentStepKeys.push(keyEl);
+            } else {
+                // Note is outside the visible keyboard (e.g. above C5) — still play
+                // it accurately, just without a key to highlight.
+                playOffScreenNote(note);
+                playbackState.currentStepOffScreenNotes.push(note);
+            }
         });
 
         const ms = step.beats * msPerBeat();
@@ -357,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playbackState.bpm = Number(songTempoSlider.value) || song.bpm;
         playbackState.savedOctaveShift = octaveShift;
         playbackState.currentStepKeys = [];
+        playbackState.currentStepOffScreenNotes = [];
         if (octaveShift !== 0) {
             octaveShift = 0;
             updateKeyLabels();
@@ -433,6 +461,20 @@ document.addEventListener('DOMContentLoaded', () => {
         playbackState.bpm = song.bpm;
         songProgressEl.max = song.notes.length;
         songProgressEl.value = 0;
+        preloadSongNotes(song);
+    }
+
+    // Warms the buffer cache for any note the song uses that's above/below the
+    // visible keyboard (preloadCurrentRange() only covers the 25 on-screen keys),
+    // so off-screen notes don't hitch on their first occurrence during playback.
+    function preloadSongNotes(song) {
+        song.notes.forEach(step => {
+            normalizeStepNotes(step).forEach(note => {
+                if (!noteToKeyElement.has(note)) {
+                    loadBuffer(noteToFileName(note));
+                }
+            });
+        });
     }
 
     songSelect.addEventListener('change', () => {

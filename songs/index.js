@@ -6,10 +6,12 @@
 import { validateSongs } from './validate.js';
 import twinkleTwinkle from './twinkle-twinkle.js';
 import maryHadALittleLamb from './mary-had-a-little-lamb.js';
+import runaway from './runaway.js';
 
 const registeredSongs = [
     twinkleTwinkle,
     maryHadALittleLamb,
+    runaway,
 ];
 
 validateSongs(registeredSongs);
